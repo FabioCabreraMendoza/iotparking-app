@@ -3,6 +3,7 @@ const env = require('./env');
 
 const pool = new Pool({
   connectionString: env.databaseUrl,
+  family: 4,
   ssl: env.databaseUrl.includes('supabase.com') ? { rejectUnauthorized: false } : false,
 });
 
