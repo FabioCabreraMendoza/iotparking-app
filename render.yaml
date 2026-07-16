@@ -1,0 +1,40 @@
+services:
+  - type: web
+    name: iotparking-backend
+    runtime: docker
+    dockerfilePath: docker/Dockerfile.backend
+    dockerContext: .
+    plan: free
+    healthCheckPath: /api/health
+    envVars:
+      - key: PORT
+        value: "4000"
+      - key: DATABASE_URL
+        sync: false # URI de conexion de Supabase (Settings > Database > Connection string)
+      - key: JWT_SECRET
+        generateValue: true
+      - key: ADMIN_USERNAME
+        value: admin
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: RESERVATION_DURATION_MINUTES
+        value: "1"
+      - key: CORS_ORIGIN
+        value: https://iotparking-frontend.onrender.com
+      - key: TOTAL_CAJONES
+        value: "10"
+      - key: MAX_RESERVAS_ACTIVAS
+        value: "5"
+
+  - type: web
+    name: iotparking-frontend
+    runtime: static
+    buildCommand: cd frontend && npm ci && npm run build
+    staticPublishPath: frontend/dist
+    envVars:
+      - key: VITE_API_URL
+        value: https://iotparking-backend.onrender.com
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
