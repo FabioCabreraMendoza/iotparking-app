@@ -14,6 +14,101 @@ async function getAllCajones() {
   return rows;
 }
 
+async function getParkingOverview() {
+  const [{ rows: cajones }, { rows: ultimosMovimientos }] = await Promise.all([
+    query(
+      `SELECT
+         c.id,
+         c.numero,
+         c.estado,
+         c.fecha_actualizacion,
+         r.id AS reserva_id,
+         r.estado AS reserva_estado,
+         r.fecha_inicio,
+         r.fecha_fin,
+         u.id AS usuario_id,
+         u.nombre,
+         u.placa_auto,
+         u.rfid_uid
+       FROM cajones c
+       LEFT JOIN LATERAL (
+         SELECT r.*
+         FROM reservas r
+         WHERE r.cajon_id = c.id
+         ORDER BY r.fecha_inicio DESC
+         LIMIT 1
+       ) r ON true
+       LEFT JOIN usuarios u ON u.id = r.usuario_id
+       ORDER BY c.numero`
+    ),
+    query(
+      `SELECT DISTINCT ON (placa_auto)
+         placa_auto,
+         evento,
+         "timestamp"
+       FROM historial_accesos
+       WHERE placa_auto IS NOT NULL
+       ORDER BY placa_auto, "timestamp" DESC`
+    ),
+  ]);
+
+  const movimientoPorPlaca = new Map(
+    ultimosMovimientos.map((movimiento) => [movimiento.placa_auto, movimiento])
+  );
+
+  const spots = cajones.map((cajon) => {
+    const vehiculo = cajon.placa_auto
+      ? {
+          nombre: cajon.nombre,
+          placa: cajon.placa_auto,
+          rfidUid: cajon.rfid_uid,
+        }
+      : null;
+
+    const ultimoMovimiento = vehiculo ? movimientoPorPlaca.get(vehiculo.placa) || null : null;
+    const ingresoRegistrado =
+      Boolean(vehiculo) && (ultimoMovimiento?.evento === 'ENTRADA' || cajon.reserva_estado === 'completada');
+
+    let accesoEstado = 'sin_ingreso';
+    if (cajon.estado === 'reservado' && ultimoMovimiento?.evento !== 'ENTRADA') {
+      accesoEstado = 'pendiente_ingreso';
+    } else if (cajon.estado === 'ocupado' && vehiculo) {
+      accesoEstado = ingresoRegistrado ? 'ingreso_confirmado' : 'ocupado_no_identificado';
+    } else if (ultimoMovimiento?.evento === 'SALIDA') {
+      accesoEstado = 'salida_registrada';
+    }
+
+    return {
+      ...cajon,
+      vehiculo,
+      reserva: cajon.reserva_id
+        ? {
+            id: cajon.reserva_id,
+            estado: cajon.reserva_estado,
+            fechaInicio: cajon.fecha_inicio,
+            fechaFin: cajon.fecha_fin,
+          }
+        : null,
+      acceso: {
+        estado: accesoEstado,
+        ultimoMovimiento: ultimoMovimiento?.evento || null,
+        ultimoMovimientoEn: ultimoMovimiento?.timestamp || null,
+        ingresoRegistrado,
+      },
+    };
+  });
+
+  return {
+    resumen: {
+      disponible: spots.filter((spot) => spot.estado === 'disponible').length,
+      ocupado: spots.filter((spot) => spot.estado === 'ocupado').length,
+      reservado: spots.filter((spot) => spot.estado === 'reservado').length,
+      ingresados: spots.filter((spot) => spot.acceso.ingresoRegistrado).length,
+    },
+    spots,
+  };
+}
+
 async function countByEstado(estado) {
   const { rows } = await query('SELECT COUNT(*)::int AS total FROM cajones WHERE estado = $1', [estado]);
   return rows[0].total;
@@ -169,6 +264,7 @@ async function registrarUsuarioDesdeTarjeta({ uid, nombre, placa }) {
 module.exports = {
   COLOR_BY_ESTADO,
   getAllCajones,
+  getParkingOverview,
   countByEstado,
   broadcastEstadoActual,
   setCajonEstado,
