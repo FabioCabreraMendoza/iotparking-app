@@ -3,6 +3,6 @@ import { useAuth } from '../hooks/useAuth'
 
 export default function RequireAdminAuth({ children }) {
   const { isAuthenticated } = useAuth()
-  if (!isAuthenticated) return <Navigate to="/admin/login" replace />
+  if (!isAuthenticated) return <Navigate to="/login" replace />
   return children
 }

@@ -11,7 +11,7 @@ export default function AdminLogin() {
   const [error, setError] = useState(null)
   const [cargando, setCargando] = useState(false)
 
-  if (isAuthenticated) return <Navigate to="/admin" replace />
+  if (isAuthenticated) return <Navigate to="/" replace />
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -20,7 +20,7 @@ export default function AdminLogin() {
     setCargando(true)
     try {
       await login(username, password)
-      navigate('/admin', { replace: true })
+      navigate('/', { replace: true })
     } catch (err) {
       setError(err.message)
     } finally {

@@ -1,5 +1,4 @@
-import { Routes, Route } from 'react-router-dom'
-import UserView from './pages/UserView'
+import { Routes, Route, Navigate } from 'react-router-dom'
 import AdminLogin from './pages/AdminLogin'
 import AdminView from './pages/AdminView'
 import RequireAdminAuth from './components/RequireAdminAuth'
@@ -7,10 +6,9 @@ import RequireAdminAuth from './components/RequireAdminAuth'
 function App() {
   return (
     <Routes>
-      <Route path="/" element={<UserView />} />
-      <Route path="/admin/login" element={<AdminLogin />} />
+      <Route path="/login" element={<AdminLogin />} />
       <Route
-        path="/admin/*"
+        path="/*"
         element={
           <RequireAdminAuth>
             <AdminView />
