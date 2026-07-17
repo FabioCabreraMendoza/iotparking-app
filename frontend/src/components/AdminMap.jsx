@@ -3,12 +3,6 @@ import { CarFront, DoorOpen, MapPinned, RefreshCw, AlertTriangle, ShieldCheck, C
 import { useSocketEvent } from '../hooks/useSocket'
 import { apiFetch, authHeaders } from '../lib/api'
 
-const ESTILO_POR_ESTADO = {
-  disponible: 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300 hover:border-emerald-400 group-hover:bg-emerald-500/20',
-  ocupado: 'bg-red-500/10 border-red-500/30 text-red-300 hover:border-red-400',
-  reservado: 'bg-indigo-500/10 border-indigo-500/30 text-indigo-300 hover:border-indigo-400',
-}
-
 const ESTILO_ACCESO = {
   ingreso_confirmado: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 shadow-[0_0_10px_rgba(16,185,129,0.2)]',
   pendiente_ingreso: 'bg-amber-500/20 text-amber-300 border-amber-500/40 shadow-[0_0_10px_rgba(245,158,11,0.2)]',
@@ -21,53 +15,87 @@ function Badge({ children, className = '' }) {
   return <span className={`inline-flex items-center rounded-lg border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider backdrop-blur-md ${className}`}>{children}</span>
 }
 
-function SpotCard({ spot, selected, onClick, index }) {
-  const stateLabel =
-    spot.estado === 'disponible' ? 'Disponible' : spot.estado === 'reservado' ? 'Reservado' : 'Ocupado'
-  const accessLabel =
-    spot.acceso.estado === 'ingreso_confirmado'
-      ? 'Adentro'
-      : spot.acceso.estado === 'pendiente_ingreso'
-        ? 'Pendiente'
-        : spot.acceso.estado === 'ocupado_no_identificado'
-          ? 'No identif.'
-          : spot.acceso.estado === 'salida_registrada'
-            ? 'Salió'
-            : 'Libre'
+// SVG Car Icon component matching colors based on state
+function CarSVG({ estado, rotation }) {
+  const isOccupied = estado === 'ocupado'
+  const isReserved = estado === 'reservado'
+  if (!isOccupied && !isReserved) return null
+
+  // Colors: red for occupied, blue/indigo for reserved
+  const bodyColor = isOccupied ? '#ef4444' : '#6366f1'
+  const roofColor = isOccupied ? '#b91c1c' : '#4338ca'
+  const windowColor = '#1e293b'
+
+  return (
+    <svg 
+      viewBox="0 0 100 200" 
+      className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-3/5 h-auto transition-all duration-500 hover:scale-105"
+      style={{ transform: `translate(-50%, -50%) rotate(${rotation}deg)` }}
+    >
+      <g stroke="#0f172a" strokeWidth="2" strokeLinejoin="round">
+        {/* Wheels */}
+        <rect x="15" y="25" width="10" height="30" rx="3" fill="#000" />
+        <rect x="75" y="25" width="10" height="30" rx="3" fill="#000" />
+        <rect x="15" y="145" width="10" height="30" rx="3" fill="#000" />
+        <rect x="75" y="145" width="10" height="30" rx="3" fill="#000" />
+        
+        {/* Car Body */}
+        <rect x="20" y="15" width="60" height="170" rx="15" fill={bodyColor} />
+        
+        {/* Roof */}
+        <rect x="25" y="55" width="50" height="90" rx="10" fill={roofColor} />
+        
+        {/* Windshield (Front) */}
+        <path d="M 30 55 L 70 55 L 80 80 L 20 80 Z" fill={windowColor} />
+        
+        {/* Rear Window */}
+        <path d="M 30 145 L 70 145 L 80 120 L 20 120 Z" fill={windowColor} />
+
+        {/* Headlights */}
+        <circle cx="35" cy="20" r="5" fill="#facc15" />
+        <circle cx="65" cy="20" r="5" fill="#facc15" />
+        
+        {/* Taillights */}
+        <rect x="25" y="180" width="15" height="5" rx="2" fill="#ef4444" />
+        <rect x="60" y="180" width="15" height="5" rx="2" fill="#ef4444" />
+      </g>
+    </svg>
+  )
+}
+
+function ParkingSpot({ spot, selected, onClick, position }) {
+  // position: 'top' (spots 1-5, cars face down) or 'bottom' (spots 6-10, cars face up)
+  const isTop = position === 'top'
+  const carRotation = isTop ? 180 : 0
+  
+  const borderClasses = isTop 
+    ? "border-b-0 border-t-4 border-l-2 border-r-2" 
+    : "border-t-0 border-b-4 border-l-2 border-r-2"
 
   return (
     <button
-      type="button"
       onClick={onClick}
-      className={`group rounded-2xl border p-4 text-left transition-all duration-300 backdrop-blur-md animate-slide-up relative overflow-hidden ${ESTILO_POR_ESTADO[spot.estado]} ${selected ? 'ring-2 ring-emerald-400/60 shadow-[0_0_20px_rgba(16,185,129,0.2)] scale-[1.02]' : 'hover:-translate-y-1'}`}
-      style={{ animationDelay: `${index * 50}ms` }}
+      className={`relative w-full h-32 sm:h-40 md:h-48 transition-all duration-300 flex items-center justify-center
+        ${borderClasses} 
+        ${selected ? 'border-emerald-400 bg-emerald-500/10 shadow-[inset_0_0_20px_rgba(16,185,129,0.3)] z-10' : 'border-slate-300 bg-slate-800/20 hover:bg-slate-700/40'}
+      `}
     >
-      {selected && (
-        <div className="absolute inset-0 bg-gradient-to-tr from-emerald-500/10 to-transparent pointer-events-none" />
-      )}
+      <div className={`absolute ${isTop ? 'top-2' : 'bottom-2'} text-xl font-bold ${selected ? 'text-emerald-400' : 'text-slate-500'}`}>
+        {spot.numero}
+      </div>
       
-      <div className="flex items-start justify-between gap-3 relative z-10">
-        <div>
-          <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-slate-400 group-hover:text-slate-300 transition-colors">
-            <MapPinned size={12} /> Cajón {spot.numero}
-          </div>
-          <div className={`mt-2 text-xl font-bold tracking-tight ${
-            spot.estado === 'disponible' ? 'text-emerald-400' :
-            spot.estado === 'ocupado' ? 'text-red-400' : 'text-indigo-400'
-          }`}>{stateLabel}</div>
-        </div>
-        <Badge className={ESTILO_ACCESO[spot.acceso.estado]}>{accessLabel}</Badge>
-      </div>
+      <CarSVG estado={spot.estado} rotation={carRotation} />
 
-      <div className="mt-4 space-y-2 relative z-10">
-        <div className="rounded-xl border border-white/5 bg-slate-950/40 px-3 py-2.5 backdrop-blur-sm group-hover:bg-slate-900/60 transition-colors">
-          <div className="text-[10px] uppercase tracking-widest text-slate-500 font-semibold mb-1">Vehículo</div>
-          <div className="text-sm font-bold text-slate-200 truncate">
-            {spot.vehiculo?.placa || '---'}
-          </div>
-          <div className="text-xs text-slate-400 truncate mt-0.5">{spot.vehiculo?.nombre || 'Sin registrar'}</div>
+      {/* State Badge on hover/select */}
+      {(selected || spot.estado !== 'disponible') && (
+        <div className={`absolute ${isTop ? '-bottom-3' : '-top-3'} text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded backdrop-blur-md border z-20 shadow-lg 
+          ${spot.estado === 'disponible' ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-300' : 
+            spot.estado === 'ocupado' ? 'bg-red-500/20 border-red-500/50 text-red-300' : 
+            'bg-indigo-500/20 border-indigo-500/50 text-indigo-300'}`
+        }>
+          {spot.vehiculo?.placa || spot.estado}
         </div>
-      </div>
+      )}
     </button>
   )
 }
@@ -102,43 +130,30 @@ export default function AdminMap({ token }) {
     }, [cargar])
   )
 
-  const ala = (desde, hasta) => cajones.filter((c) => c.numero >= desde && c.numero <= hasta)
   const selected = useMemo(() => cajones.find((cajon) => cajon.id === selectedId) || cajones[0] || null, [cajones, selectedId])
 
-  const renderAla = (titulo, lista, startIndex) => (
-    <section>
-      <div className="mb-4 flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-slate-300 uppercase tracking-widest">{titulo}</h3>
-        <span className="text-xs font-medium text-slate-500 bg-slate-800/50 px-2 py-1 rounded-md">{lista.length} espacios</span>
-      </div>
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
-        {lista.map((spot, i) => (
-          <SpotCard key={spot.id} spot={spot} index={startIndex + i} selected={spot.id === selected?.id} onClick={() => setSelectedId(spot.id)} />
-        ))}
-      </div>
-    </section>
-  )
+  const topRow = cajones.filter(c => c.numero >= 1 && c.numero <= 5).sort((a, b) => a.numero - b.numero)
+  const bottomRow = cajones.filter(c => c.numero >= 6 && c.numero <= 10).sort((a, b) => a.numero - b.numero)
 
   return (
     <div className="space-y-6">
       <div className="grid gap-6 xl:grid-cols-[1.4fr_0.8fr]">
-        <div className="glass-panel rounded-3xl p-6 lg:p-8">
-          <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
+        
+        {/* Main Map Area */}
+        <div className="glass-panel rounded-3xl p-4 sm:p-6 lg:p-8 flex flex-col">
+          <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
             <div>
               <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-emerald-400 mb-2">
-                <DoorOpen size={14} /> Vista en vivo
+                <MapPinned size={14} /> Top-Down View
               </div>
               <h2 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">Mapa del Estacionamiento</h2>
-              <p className="mt-2 text-sm text-slate-400 max-w-lg">
-                Monitorea el estado físico de los cajones, reservas activas y el flujo de vehículos en tiempo real.
-              </p>
             </div>
             <button
               type="button"
               onClick={cargar}
-              className="inline-flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-800/50 px-4 py-2.5 text-sm font-medium text-slate-200 transition-all hover:bg-slate-700 hover:shadow-lg"
+              className="inline-flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-800/50 px-4 py-2 text-sm font-medium text-slate-200 transition-all hover:bg-slate-700 hover:shadow-lg"
             >
-              <RefreshCw size={16} /> Actualizar
+              <RefreshCw size={16} /> <span className="hidden sm:inline">Actualizar</span>
             </button>
           </div>
 
@@ -150,43 +165,53 @@ export default function AdminMap({ token }) {
           )}
           
           {loading ? (
-            <div className="rounded-2xl border border-white/5 bg-white/5 p-12 text-center text-slate-400 flex flex-col items-center justify-center gap-4">
+            <div className="flex-1 rounded-2xl border border-white/5 bg-slate-900/40 p-12 text-center text-slate-400 flex flex-col items-center justify-center gap-4">
               <RefreshCw size={32} className="animate-spin text-emerald-500" />
               <p className="font-medium tracking-wide">Cargando sensores espaciales...</p>
             </div>
           ) : (
-            <div className="space-y-10">
-              <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-                <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-5 backdrop-blur-sm relative overflow-hidden group">
-                  <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                  <div className="text-[10px] font-bold uppercase tracking-widest text-emerald-400 mb-1">Disponibles</div>
-                  <div className="text-3xl font-black text-white">{cajones.filter((spot) => spot.estado === 'disponible').length}</div>
-                </div>
-                <div className="rounded-2xl border border-red-500/20 bg-red-500/10 p-5 backdrop-blur-sm relative overflow-hidden group">
-                  <div className="absolute inset-0 bg-gradient-to-br from-red-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                  <div className="text-[10px] font-bold uppercase tracking-widest text-red-400 mb-1">Ocupados</div>
-                  <div className="text-3xl font-black text-white">{cajones.filter((spot) => spot.estado === 'ocupado').length}</div>
-                </div>
-                <div className="rounded-2xl border border-indigo-500/20 bg-indigo-500/10 p-5 backdrop-blur-sm relative overflow-hidden group">
-                  <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                  <div className="text-[10px] font-bold uppercase tracking-widest text-indigo-400 mb-1">Reservados</div>
-                  <div className="text-3xl font-black text-white">{cajones.filter((spot) => spot.estado === 'reservado').length}</div>
-                </div>
-                <div className="rounded-2xl border border-amber-500/20 bg-amber-500/10 p-5 backdrop-blur-sm relative overflow-hidden group">
-                  <div className="absolute inset-0 bg-gradient-to-br from-amber-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                  <div className="text-[10px] font-bold uppercase tracking-widest text-amber-400 mb-1">Adentro</div>
-                  <div className="text-3xl font-black text-white">{cajones.filter((spot) => spot.acceso?.ingresoRegistrado).length}</div>
-                </div>
+            <div className="flex-1 flex flex-col bg-slate-800 rounded-2xl p-4 sm:p-8 border-4 border-slate-700 relative overflow-hidden shadow-2xl">
+              {/* Top Row (Spots 1-5) */}
+              <div className="grid grid-cols-5 gap-0">
+                {topRow.map((spot) => (
+                  <ParkingSpot 
+                    key={spot.id} 
+                    spot={spot} 
+                    selected={spot.id === selected?.id} 
+                    onClick={() => setSelectedId(spot.id)}
+                    position="top"
+                  />
+                ))}
               </div>
 
-              <div className="space-y-8">
-                {renderAla('Ala Izquierda — 1 a 5', ala(1, 5), 0)}
-                {renderAla('Ala Derecha — 6 a 10', ala(6, 10), 5)}
+              {/* Central Aisle (Road) */}
+              <div className="h-24 sm:h-32 w-full flex items-center justify-center relative">
+                {/* Road marking dashed line */}
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="w-full h-1 border-t-4 border-dashed border-yellow-500/50"></div>
+                </div>
+                {/* Direction Arrows */}
+                <div className="absolute left-1/4 text-yellow-500/30 text-4xl font-black rotate-180">➔</div>
+                <div className="absolute right-1/4 text-yellow-500/30 text-4xl font-black">➔</div>
+              </div>
+
+              {/* Bottom Row (Spots 6-10) */}
+              <div className="grid grid-cols-5 gap-0">
+                {bottomRow.map((spot) => (
+                  <ParkingSpot 
+                    key={spot.id} 
+                    spot={spot} 
+                    selected={spot.id === selected?.id} 
+                    onClick={() => setSelectedId(spot.id)}
+                    position="bottom"
+                  />
+                ))}
               </div>
             </div>
           )}
         </div>
 
+        {/* Sidebar Inspector */}
         <aside className="glass-panel rounded-3xl p-6 lg:p-8 sticky top-[100px] h-fit">
           <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-6">
             <CarFront size={14} /> Inspector de Cajón
