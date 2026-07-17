@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { LayoutGrid, Users, Clock, BarChart3, LogOut, PanelLeftClose } from 'lucide-react'
+import { LayoutGrid, Users, Clock, BarChart3, LogOut, PanelLeftClose, ShieldCheck } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
 import AdminMap from '../components/AdminMap'
 import UsuariosAdmin from '../components/UsuariosAdmin'
@@ -27,52 +27,60 @@ export default function AdminView() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100">
-      <header className="border-b border-slate-800/80 bg-slate-950/90 px-4 sm:px-8 py-4 flex items-center justify-between sticky top-0 z-20 backdrop-blur">
-        <div>
-          <div className="text-xs uppercase tracking-[0.24em] text-slate-500">Sistema de estacionamiento inteligente</div>
-          <h1 className="text-xl font-bold text-white">Panel de Administrador</h1>
+    <div className="min-h-screen bg-slate-950 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(120,119,198,0.3),rgba(255,255,255,0))] text-slate-100 flex flex-col">
+      <header className="border-b border-white/5 bg-slate-950/40 px-4 sm:px-8 py-4 flex items-center justify-between sticky top-0 z-30 backdrop-blur-xl">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/30">
+            <ShieldCheck size={20} className="text-white" />
+          </div>
+          <div>
+            <div className="text-[10px] uppercase tracking-[0.24em] text-slate-400 font-semibold">Sistema de Control</div>
+            <h1 className="text-lg font-bold text-white leading-tight">Panel de Administrador</h1>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           <button
             onClick={() => setMenuCompacto((value) => !value)}
-            className="flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-300 hover:bg-slate-800"
+            className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-slate-300 hover:bg-white/10 hover:text-white transition-all"
           >
-            <PanelLeftClose size={16} /> {menuCompacto ? 'Expandir menú' : 'Compactar menú'}
+            <PanelLeftClose size={16} /> <span className="hidden sm:inline">{menuCompacto ? 'Expandir' : 'Compactar'}</span>
           </button>
-          <button onClick={handleLogout} className="flex items-center gap-1 text-sm text-slate-400 hover:text-red-400">
-            <LogOut size={16} /> Salir
+          <button onClick={handleLogout} className="flex items-center gap-2 rounded-xl bg-red-500/10 px-4 py-2 text-sm text-red-400 hover:bg-red-500 hover:text-white transition-all">
+            <LogOut size={16} /> <span className="hidden sm:inline">Salir</span>
           </button>
         </div>
       </header>
 
-      <div className="grid min-h-[calc(100vh-73px)] lg:grid-cols-[280px_1fr]">
-        <aside className={`border-b border-slate-800 bg-slate-950/95 px-4 py-4 lg:border-b-0 lg:border-r lg:px-5 ${menuCompacto ? 'lg:w-[110px]' : ''}`}>
-          <div className="text-xs uppercase tracking-[0.24em] text-slate-500">Menú interactivo</div>
-          <div className="mt-4 space-y-2">
+      <div className="flex-1 grid lg:grid-cols-[auto_1fr] relative">
+        <aside className={`border-b border-white/5 bg-slate-950/40 backdrop-blur-xl px-4 py-6 lg:border-b-0 lg:border-r lg:min-h-[calc(100vh-73px)] z-20 ${menuCompacto ? 'lg:w-[90px]' : 'lg:w-[280px]'} transition-all duration-300`}>
+          <div className={`text-[10px] uppercase tracking-[0.24em] text-slate-500 font-semibold mb-4 px-2 ${menuCompacto ? 'hidden lg:block lg:text-center lg:px-0' : ''}`}>
+            Menú Principal
+          </div>
+          <div className="flex flex-row lg:flex-col gap-2 overflow-x-auto lg:overflow-visible pb-2 lg:pb-0 scrollbar-hide">
             {TABS.map(({ id, label, icon: Icon }) => (
               <button
                 key={id}
                 onClick={() => setTab(id)}
-                className={`flex w-full items-center gap-3 rounded-2xl border px-4 py-3 text-sm transition ${
+                className={`flex items-center gap-3 rounded-xl px-4 py-3 text-sm transition-all whitespace-nowrap ${
                   tab === id
-                    ? 'border-emerald-500/40 bg-emerald-500/10 text-white shadow-lg shadow-emerald-950/20'
-                    : 'border-slate-800 bg-slate-900/60 text-slate-400 hover:border-slate-700 hover:bg-slate-900 hover:text-slate-200'
-                }`}
+                    ? 'bg-gradient-to-r from-emerald-500/20 to-emerald-500/5 border border-emerald-500/30 text-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.15)]'
+                    : 'border border-transparent text-slate-400 hover:bg-white/5 hover:text-slate-200'
+                } ${menuCompacto ? 'lg:justify-center lg:px-0' : ''}`}
+                title={menuCompacto ? label : ''}
               >
-                <Icon size={16} />
+                <Icon size={18} className={tab === id ? 'text-emerald-400' : ''} />
                 <span className={menuCompacto ? 'lg:hidden' : ''}>{label}</span>
               </button>
             ))}
           </div>
         </aside>
 
-        <main className="bg-slate-900/50 min-h-[calc(100vh-73px)] p-4 sm:p-6 lg:p-8">
+        <main className="p-4 sm:p-6 lg:p-8 animate-fade-in relative z-10 overflow-x-hidden">
           {tab === 'mapa' && <AdminMap token={token} />}
           {tab === 'usuarios' && <UsuariosAdmin token={token} />}
           {tab === 'reloj' && <SystemClockControl token={token} />}
           {tab === 'reportes' && (
-            <div className="space-y-8">
+            <div className="space-y-8 animate-slide-up">
               <ReportCharts token={token} />
               <PlateSearch token={token} />
             </div>
