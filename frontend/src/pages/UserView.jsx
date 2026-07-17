@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react'
-import { CarFront, ShieldCheck, AlertCircle } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { CarFront, ShieldCheck, AlertCircle, LockKeyhole } from 'lucide-react'
 import ParkingGrid from '../components/ParkingGrid'
 import CardDetectedModal from '../components/CardDetectedModal'
 import { useSocketEvent } from '../hooks/useSocket'
@@ -44,7 +45,18 @@ export default function UserView() {
 
   return (
     <div className="min-h-screen bg-slate-950 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(120,119,198,0.3),rgba(255,255,255,0))] text-slate-100 p-4 sm:p-8 animate-fade-in">
-      <header className="max-w-4xl mx-auto mb-10 pt-4">
+      
+      {/* Top Navigation Bar */}
+      <div className="max-w-4xl mx-auto flex justify-end mb-4">
+        <Link 
+          to="/admin/login" 
+          className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-1.5 text-xs font-semibold text-slate-300 hover:bg-indigo-500/20 hover:text-indigo-300 hover:border-indigo-500/30 transition-all backdrop-blur-md"
+        >
+          <LockKeyhole size={14} /> Acceso Administrador
+        </Link>
+      </div>
+
+      <header className="max-w-4xl mx-auto mb-10">
         <div className="glass-panel rounded-3xl p-6 sm:p-8 flex flex-col md:flex-row items-center justify-between gap-6 relative overflow-hidden">
           <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-400 via-indigo-500 to-purple-500"></div>
           
